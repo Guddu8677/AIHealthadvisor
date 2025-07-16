@@ -38,7 +38,7 @@
 //         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
 //     ];
 
-//     const body = JSON.stringify({
+//     const body = JSON.stringify({r
 //         contents: [{
 //             role: 'user',
 //             parts: [{ text: prompt }]
@@ -366,16 +366,16 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  KeyboardAvoidingView, Platform, SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet, Text,
-  TextInput, TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    KeyboardAvoidingView, Platform, SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet, Text,
+    TextInput, TouchableOpacity,
+    View
 } from 'react-native';
 
 // --- NEW IMPORTS FOR ADVANCED FEATURES ---
@@ -385,7 +385,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 
 // --- CONFIGURATION ---
-const GEMINI_API_KEY = 'AIzaSyDzni-ZY3d7QbJc17OhER6HWDtBTyhy8g8'; // Your provided key
+const GEMINI_API_KEY = 'AIzaSyD6ziTX2_I0JRpu7CNkGqtc1_mAYcZKJOg'; // Your provided key
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 const { width, height } = Dimensions.get('window');
 
