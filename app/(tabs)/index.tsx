@@ -362,383 +362,791 @@
 // ADDED: Enhanced prompt for safer medication suggestions.
 // By A-Z Technology
 
+// import { Feather } from '@expo/vector-icons';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import React, { useEffect, useRef, useState } from 'react';
+// import {
+//     ActivityIndicator,
+//     Alert,
+//     Dimensions,
+//     Image,
+//     KeyboardAvoidingView, Platform, SafeAreaView,
+//     ScrollView,
+//     StatusBar,
+//     StyleSheet, Text,
+//     TextInput, TouchableOpacity,
+//     View
+// } from 'react-native';
+
+// // --- NEW IMPORTS FOR ADVANCED FEATURES ---
+// import Voice from '@react-native-voice/voice';
+// import { Camera } from 'expo-camera';
+// import * as ImagePicker from 'expo-image-picker';
+// import * as Speech from 'expo-speech';
+
+// // --- CONFIGURATION ---
+// const GEMINI_API_KEY = 'AIzaSyD6ziTX2_I0JRpu7CNkGqtc1_mAYcZKJOg'; // Your provided key
+// const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+// const { width, height } = Dimensions.get('window');
+
+
+// // --- ENHANCED AI HELPER (Now supports images) ---
+// const callGeminiAPI = async (prompt, base64Image = null) => {
+//     const validSafetySettings = [
+//         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+//         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+//         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+//         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+//     ];
+
+//     let parts = [{ text: prompt }];
+
+//     // If an image is provided, add it to the request payload
+//     if (base64Image) {
+//         parts.push({
+//             inline_data: {
+//                 mime_type: 'image/jpeg',
+//                 data: base64Image
+//             }
+//         });
+//     }
+
+//     const body = JSON.stringify({
+//         contents: [{ role: 'user', parts: parts }],
+//         generationConfig: { temperature: 0.7, maxOutputTokens: 2048, },
+//         safetySettings: validSafetySettings,
+//     });
+
+//     try {
+//         const response = await fetch(GEMINI_API_URL, {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body,
+//         });
+//         const data = await response.json();
+//         if (response.ok && data.candidates && data.candidates.length > 0) {
+//             return data.candidates[0].content.parts[0].text;
+//         } else {
+//             const errorMsg = data.error?.message || 'The AI is unavailable. Please check the API key and try again.';
+//             throw new Error(errorMsg);
+//         }
+//     } catch (error) {
+//         console.error("API Fetch Error:", error);
+//         throw new Error('Network error or invalid API key. Please check your connection and configuration.');
+//     }
+// };
+
+// // --- SUB-COMPONENTS (Styling Applied) ---
+
+// const LoginScreen = ({ onLogin }) => {
+//     // This component remains the same as your working version, just with updated styles.
+//     const [name, setName] = useState('');
+//     const handleLogin = () => {
+//         if (name.trim().length > 2) onLogin(name.trim());
+//         else Alert.alert('Invalid Name', 'Please enter a name with at least 3 characters.');
+//     };
+//     return (
+//         <LinearGradient colors={['#4facfe', '#00f2fe']} style={styles.flexOne}>
+//             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.loginContainer}>
+//                 <View style={styles.loginForm}>
+//                     <Image source={{ uri: 'https://i.ibb.co/6PqjXfJ/health-logo.png' }} style={styles.logo} />
+//                     <Text style={styles.loginTitle}>AI Health Advisor</Text>
+//                     <Text style={styles.loginSubtitle}>Your Personal Wellness Companion</Text>
+//                     <TextInput style={styles.loginInput} placeholder="Enter your first name" placeholderTextColor="#666" value={name} onChangeText={setName} />
+//                     <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+//                          <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.loginButtonGradient}>
+//                             <Text style={styles.loginButtonText}>Get Started</Text>
+//                             <Feather name="arrow-right-circle" size={22} color="white" />
+//                          </LinearGradient>
+//                     </TouchableOpacity>
+//                 </View>
+//             </KeyboardAvoidingView>
+//         </LinearGradient>
+//     );
+// };
+
+// const ChatScreen = ({ username }) => {
+//     // --- STATE FOR NEW FEATURES ---
+//     const [messages, setMessages] = useState([{ id: 'initial-bot-message', role: 'model', content: `Hi ${username}! I'm your AI Health Advisor. You can type, use the microphone, or send a picture.` }]);
+//     const [inputMessage, setInputMessage] = useState('');
+//     const [isLoading, setIsLoading] = useState(false);
+//     const [pickedImage, setPickedImage] = useState(null); // For camera/gallery image
+//     const [isRecording, setIsRecording] = useState(false); // For microphone state
+//     const [language, setLanguage] = useState('en-US'); // 'en-US' or 'hi-IN'
+//     const [isVoiceOutput, setIsVoiceOutput] = useState(false); // For toggling TTS
+//     const scrollViewRef = useRef();
+
+//     // --- PERMISSIONS & VOICE SETUP ---
+//     useEffect(() => {
+//         // Request permissions on mount
+//         (async () => {
+//             await Camera.requestCameraPermissionsAsync();
+//             await ImagePicker.requestMediaLibraryPermissionsAsync();
+//             if (Platform.OS === 'android') {
+//                  await Voice.requestPermissions();
+//             }
+//         })();
+
+//         // Setup Voice event listeners
+//         const onSpeechResults = (e) => {
+//             setInputMessage(e.value[0]);
+//             setIsRecording(false);
+//         };
+//         const onSpeechError = (e) => {
+//             console.error(e);
+//             setIsRecording(false);
+//         };
+//         Voice.onSpeechResults = onSpeechResults;
+//         Voice.onSpeechError = onSpeechError;
+//         return () => { // Cleanup
+//             Voice.destroy().then(Voice.removeAllListeners);
+//         };
+//     }, []);
+
+//     // --- HANDLERS FOR NEW FEATURES ---
+//     const handleLanguageToggle = () => setLanguage(prev => (prev === 'en-US' ? 'hi-IN' : 'en-US'));
+//     const handleVoiceOutputToggle = () => setIsVoiceOutput(prev => !prev);
+    
+//     const startRecording = async () => {
+//         setIsRecording(true);
+//         setInputMessage('');
+//         try {
+//             await Voice.start(language);
+//         } catch (e) {
+//             console.error(e);
+//             setIsRecording(false);
+//         }
+//     };
+//     const stopRecording = async () => {
+//         try {
+//             await Voice.stop();
+//         } catch (e) {
+//             console.error(e);
+//         }
+//         setIsRecording(false);
+//     };
+
+//     const handlePickImage = async () => {
+//         Alert.alert("Select Image", "Choose an image source", [
+//             { text: "Camera", onPress: async () => {
+//                 let result = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+//                 if (!result.canceled) setPickedImage(result.assets[0]);
+//             }},
+//             { text: "Gallery", onPress: async () => {
+//                 let result = await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true });
+//                 if (!result.canceled) setPickedImage(result.assets[0]);
+//             }},
+//             { text: "Cancel", style: "cancel" }
+//         ]);
+//     };
+    
+//     const speakResponse = (text) => {
+//       if (isVoiceOutput) {
+//         Speech.speak(text, { language: language === 'en-US' ? 'en' : 'hi' });
+//       }
+//     };
+
+//     const handleSendMessage = async () => {
+//         if ((inputMessage.trim() === '' && !pickedImage) || isLoading) return;
+
+//         const userMessageContent = inputMessage.trim();
+//         const userMessage = { id: Date.now().toString(), role: 'user', content: userMessageContent, imageUri: pickedImage?.uri };
+//         setMessages(prev => [...prev, userMessage]);
+        
+//         const imageToSend = pickedImage?.base64 || null;
+
+//         setInputMessage('');
+//         setPickedImage(null);
+//         setIsLoading(true);
+
+//         const currentLanguage = language === 'en-US' ? 'English' : 'Hindi';
+//         const prompt = `**Your Role:** You are a helpful and cautious AI Health Advisor.
+// **Language for Response:** You MUST respond in ${currentLanguage}.
+// **CRUCIAL RULE 1:** ALWAYS start your response with a disclaimer: "**Disclaimer: I am an AI assistant, not a medical professional. This is for informational purposes only. Please consult a qualified healthcare provider for any medical advice.**" (Translate this disclaimer to ${currentLanguage} if needed).
+// **CRUCIAL RULE 2:** If the user asks for a specific medication or tablet, you may suggest a common over-the-counter example (e.g., 'for a headache, something like Paracetamol is common'), but you MUST immediately and strongly follow up with a disclaimer like 'However, this is not a prescription. You MUST consult a qualified doctor before taking any medication.' Do not suggest prescription drugs.
+// **Your Task:** Analyze the user's text and, if provided, the image. The user's query is: "${userMessageContent}". Respond empathetically and safely according to the rules.`;
+        
+//         try {
+//             const aiContent = await callGeminiAPI(prompt, imageToSend);
+//             const aiMessage = { id: Date.now().toString() + 'ai', role: 'model', content: aiContent };
+//             setMessages(prev => [...prev, aiMessage]);
+//             speakResponse(aiContent); // Speak the response
+//         } catch (error) {
+//             const errorMessage = { id: Date.now().toString() + 'err', role: 'model', content: `Error: ${error.message}` };
+//             setMessages(prev => [...prev, errorMessage]);
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     };
+
+//     return (
+//         <View style={styles.flexOne}>
+//             <View style={styles.featureToggleBar}>
+//                  <TouchableOpacity onPress={handleLanguageToggle} style={styles.toggleButton}>
+//                     <Feather name="globe" size={20} color="#333" />
+//                     <Text style={styles.toggleText}>{language === 'en-US' ? 'EN' : 'HI'}</Text>
+//                  </TouchableOpacity>
+//                  <TouchableOpacity onPress={handleVoiceOutputToggle} style={styles.toggleButton}>
+//                     <Feather name={isVoiceOutput ? "volume-2" : "volume-x"} size={20} color={isVoiceOutput ? "#2575fc" : "#333"} />
+//                     <Text style={[styles.toggleText, isVoiceOutput && {color: "#2575fc"}]}>Voice</Text>
+//                  </TouchableOpacity>
+//             </View>
+
+//             <ScrollView ref={scrollViewRef} style={styles.chatContainer} contentContainerStyle={styles.chatContentContainer} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
+//                 {messages.map((msg) => (
+//                     <View key={msg.id} style={[styles.messageBubble, msg.role === 'user' ? styles.userMessage : styles.botMessage]}>
+//                         {msg.imageUri && <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />}
+//                         {msg.content !== '' && <Text style={msg.role === 'user' ? styles.userMessageText : styles.botMessageText}>{msg.content}</Text>}
+//                     </View>
+//                 ))}
+//                 {isLoading && <ActivityIndicator style={styles.loadingIndicator} size="large" color="#2575fc" />}
+//             </ScrollView>
+
+//             <View style={styles.inputWrapper}>
+//                 {pickedImage && (
+//                     <View style={styles.imagePreviewContainer}>
+//                         <Image source={{ uri: pickedImage.uri }} style={styles.imagePreview} />
+//                         <TouchableOpacity onPress={() => setPickedImage(null)} style={styles.removeImageButton}>
+//                             <Feather name="x" size={18} color="white" />
+//                         </TouchableOpacity>
+//                     </View>
+//                 )}
+//                 <View style={styles.inputRow}>
+//                     <TouchableOpacity style={styles.iconButton} onPress={handlePickImage} disabled={isLoading}>
+//                         <Feather name="camera" size={24} color="#555" />
+//                     </TouchableOpacity>
+//                     <TextInput style={styles.chatInput} value={inputMessage} onChangeText={setInputMessage} placeholder="Type or hold mic to talk..." placeholderTextColor="#999" multiline editable={!isLoading} />
+//                     <TouchableOpacity style={styles.iconButton} onPressIn={startRecording} onPressOut={stopRecording} disabled={isLoading}>
+//                         <Feather name="mic" size={24} color={isRecording ? '#ff4d4d' : '#555'} />
+//                     </TouchableOpacity>
+//                     <TouchableOpacity style={[styles.sendButton, isLoading && styles.disabledButton]} onPress={handleSendMessage} disabled={isLoading}>
+//                         <Feather name="send" size={24} color="white" />
+//                     </TouchableOpacity>
+//                 </View>
+//             </View>
+//         </View>
+//     );
+// };
+
+// // ... HealthTipsScreen and Main App component remain the same ...
+// const HealthTipsScreen = ({ onLogout }) => {
+//     const [tip, setTip] = useState('Tap the button below for a new wellness tip!');
+//     const [isTipLoading, setIsTipLoading] = useState(false);
+//     const fetchHealthTip = async () => {
+//         setIsTipLoading(true); setTip('');
+//         const prompt = `Provide a unique, interesting, and actionable wellness tip for today. Make it encouraging and easy to understand. Start with a catchy title in bold, like "**Today's Wellness Spark:**".`;
+//         try {
+//             setTip(await callGeminiAPI(prompt));
+//         } catch (error) {
+//             setTip(`Sorry, couldn't fetch a tip right now. ${error.message}`);
+//         } finally { setIsTipLoading(false); }
+//     };
+//     return (
+//         <View style={styles.tipsContainer}>
+//             <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.tipCard}>
+//                 <View style={styles.tipCardContent}>
+//                     {isTipLoading ? <ActivityIndicator size="large" color="#fff" /> : <Text style={styles.tipText}>{tip}</Text>}
+//                 </View>
+//             </LinearGradient>
+//             <TouchableOpacity style={styles.tipButton} onPress={fetchHealthTip} disabled={isTipLoading}>
+//                  <LinearGradient colors={['#11998e', '#38ef7d']} style={styles.loginButtonGradient}>
+//                     <Text style={styles.tipButtonText}>Get New Tip</Text><Feather name="refresh-cw" size={20} color="white" />
+//                  </LinearGradient>
+//             </TouchableOpacity>
+//         </View>
+//     );
+// };
+
+// export default function App() {
+//     const [isLoggedIn, setIsLoggedIn] = useState(false);
+//     const [username, setUsername] = useState('');
+//     const [activeTab, setActiveTab] = useState('chat');
+//     const handleLogin = (name) => { setUsername(name); setIsLoggedIn(true); };
+//     const handleLogout = () => {
+//         Alert.alert("Log Out", "Are you sure you want to log out?", [
+//             { text: "Cancel", style: "cancel" },
+//             { text: "Log Out", onPress: () => { setUsername(''); setIsLoggedIn(false); setActiveTab('chat'); }}
+//         ]);
+//     };
+//     return (
+//         <SafeAreaView style={styles.safeArea}>
+//             <StatusBar barStyle="dark-content" />
+//             {!isLoggedIn ? <LoginScreen onLogin={handleLogin} /> : (
+//                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flexOne}>
+//                     <View style={styles.header}>
+//                         <Text style={styles.headerTitle}>Hi, {username}!</Text>
+//                         <TouchableOpacity onPress={handleLogout}><Feather name="log-out" size={24} color="#333" /></TouchableOpacity>
+//                     </View>
+//                     <View style={styles.tabBar}>
+//                         <TouchableOpacity style={[styles.tab, activeTab === 'chat' && styles.activeTab]} onPress={() => setActiveTab('chat')}>
+//                             <Feather name="message-circle" size={20} color={activeTab === 'chat' ? '#FFF' : '#2575fc'} />
+//                             <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Advisor Chat</Text>
+//                         </TouchableOpacity>
+//                         <TouchableOpacity style={[styles.tab, activeTab === 'tips' && styles.activeTab]} onPress={() => setActiveTab('tips')}>
+//                             <Feather name="heart" size={20} color={activeTab === 'tips' ? '#FFF' : '#2575fc'} />
+//                             <Text style={[styles.tabText, activeTab === 'tips' && styles.activeTabText]}>Health Tips</Text>
+//                         </TouchableOpacity>
+//                     </View>
+//                     {activeTab === 'chat' ? <ChatScreen username={username} /> : <HealthTipsScreen />}
+//                 </KeyboardAvoidingView>
+//             )}
+//         </SafeAreaView>
+//     );
+// }
+
+// // --- STYLESHEET (Updated for new features) ---
+// const styles = StyleSheet.create({
+//     safeArea: { flex: 1, backgroundColor: '#f0f4f8', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+//     flexOne: { flex: 1 },
+//     loginContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+//     loginForm: { width: '90%', backgroundColor: 'rgba(255, 255, 255, 0.8)', padding: 25, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
+//     logo: { width: 100, height: 100, marginBottom: 20, borderRadius: 20 },
+//     loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' },
+//     loginSubtitle: { fontSize: 16, color: '#555', marginBottom: 30, textAlign: 'center' },
+//     loginInput: { width: '100%', height: 50, backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 15, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: '#DDD', color: '#333' },
+//     loginButton: { width: '100%', borderRadius: 10, overflow: 'hidden' },
+//     loginButtonGradient: { flexDirection: 'row', paddingVertical: 15, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+//     loginButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
+//     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
+//     headerTitle: { fontSize: 22, fontWeight: '600', color: '#333' },
+//     tabBar: { flexDirection: 'row', padding: 5, marginHorizontal: 15, marginTop: 10, marginBottom: 5, borderRadius: 30, backgroundColor: '#FFF', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+//     tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 25 },
+//     activeTab: { backgroundColor: '#2575fc' },
+//     tabText: { marginLeft: 8, fontSize: 16, color: '#2575fc', fontWeight: '600' },
+//     activeTabText: { color: '#FFF' },
+//     chatContainer: { flex: 1, backgroundColor: '#f0f4f8' },
+//     chatContentContainer: { paddingHorizontal: 10, paddingBottom: 10 },
+//     messageBubble: { maxWidth: '80%', padding: 15, borderRadius: 20, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+//     userMessage: { backgroundColor: '#2575fc', alignSelf: 'flex-end', borderBottomRightRadius: 5 },
+//     botMessage: { backgroundColor: '#FFF', alignSelf: 'flex-start', borderBottomLeftRadius: 5 },
+//     userMessageText: { color: 'white', fontSize: 16, lineHeight: 24 },
+//     botMessageText: { color: '#333', fontSize: 16, lineHeight: 24 },
+//     messageImage: { width: width * 0.6, height: width * 0.6, borderRadius: 15, marginBottom: 10, alignSelf: 'center' },
+//     loadingIndicator: { marginVertical: 20 },
+//     inputWrapper: { borderTopWidth: 1, borderTopColor: '#EAEAEA', backgroundColor: '#FFF', paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
+//     inputRow: { flexDirection: 'row', alignItems: 'center', padding: 10, },
+//     chatInput: { flex: 1, minHeight: 45, maxHeight: 120, backgroundColor: '#f0f4f8', borderRadius: 22, paddingHorizontal: 20, paddingTop: 12, fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0' },
+//     iconButton: { padding: 10 },
+//     sendButton: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: '#2575fc', justifyContent: 'center', alignItems: 'center', shadowColor: '#2575fc', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4, marginLeft: 5 },
+//     disabledButton: { backgroundColor: '#B0C4DE', shadowOpacity: 0 },
+//     imagePreviewContainer: { position: 'relative', alignSelf: 'flex-start', margin: 10, },
+//     imagePreview: { width: 80, height: 80, borderRadius: 10, borderWidth: 2, borderColor: '#2575fc' },
+//     removeImageButton: { position: 'absolute', top: -10, right: -10, backgroundColor: '#ff4d4d', borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+//     featureToggleBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 15, paddingVertical: 5, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eaeaea' },
+//     toggleButton: { flexDirection: 'row', alignItems: 'center', padding: 8, marginLeft: 15 },
+//     toggleText: { marginLeft: 5, fontWeight: '600', color: '#333' },
+//     tipsContainer: { flex: 1, alignItems: 'center', justifyContent: 'space-around', padding: 20, backgroundColor: '#f0f4f8' },
+//     tipCard: { width: '100%', height: height * 0.5, borderRadius: 30, padding: 5, shadowColor: '#6a11cb', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+//     tipCardContent: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 25 },
+//     tipText: { fontSize: 22, color: 'white', fontWeight: 'bold', textAlign: 'center', lineHeight: 32, textShadowColor: 'rgba(0, 0, 0, 0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+//     tipButton: { width: '80%', borderRadius: 10, overflow: 'hidden' },
+//     tipButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// AI Health Advisor App - v6.1 "Vision Updated"
+// Updated for Expo + React Native 0.81+
+// Fixes for voice recognition & permissions, improved TTS and camera support
+
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
+
 import {
     ActivityIndicator,
     Alert,
     Dimensions,
     Image,
-    KeyboardAvoidingView, Platform, SafeAreaView,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
     ScrollView,
     StatusBar,
-    StyleSheet, Text,
-    TextInput, TouchableOpacity,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
     View
 } from 'react-native';
 
-// --- NEW IMPORTS FOR ADVANCED FEATURES ---
+// --- ADVANCED FEATURES ---
 import Voice from '@react-native-voice/voice';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 
-// --- CONFIGURATION ---
-const GEMINI_API_KEY = 'AIzaSyD6ziTX2_I0JRpu7CNkGqtc1_mAYcZKJOg'; // Your provided key
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 const { width, height } = Dimensions.get('window');
+const GEMINI_API_KEY = 'AIzaSyBhnRPOqCXjRj-dQPqFKcQOyF3cdjFFUBk';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
+// ------------------------- AI CALL -------------------------
+const callGeminiAPI = async (prompt: string, base64Image: string | null = null) => {
+  const validSafetySettings = [
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  ];
 
-// --- ENHANCED AI HELPER (Now supports images) ---
-const callGeminiAPI = async (prompt, base64Image = null) => {
-    const validSafetySettings = [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-    ];
+  let parts: any[] = [{ text: prompt }];
 
-    let parts = [{ text: prompt }];
-
-    // If an image is provided, add it to the request payload
-    if (base64Image) {
-        parts.push({
-            inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
-            }
-        });
-    }
-
-    const body = JSON.stringify({
-        contents: [{ role: 'user', parts: parts }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, },
-        safetySettings: validSafetySettings,
+  if (base64Image) {
+    parts.push({
+      inline_data: {
+        mime_type: 'image/jpeg',
+        data: base64Image
+      }
     });
+  }
+
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+    safetySettings: validSafetySettings
+  });
+
+  try {
+    const response = await fetch(GEMINI_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    const data = await response.json();
+    if (response.ok && data.candidates && data.candidates.length > 0) {
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      const errorMsg = data.error?.message || 'AI service unavailable.';
+      throw new Error(errorMsg);
+    }
+  } catch (error) {
+    console.error('API Fetch Error:', error);
+    throw new Error('Network error or invalid API key.');
+  }
+};
+
+// ------------------------- LOGIN SCREEN -------------------------
+const LoginScreen = ({ onLogin }: { onLogin: (name: string) => void }) => {
+  const [name, setName] = useState('');
+
+  const handleLogin = () => {
+    if (name.trim().length > 2) onLogin(name.trim());
+    else Alert.alert('Invalid Name', 'Enter a name with at least 3 characters.');
+  };
+
+  return (
+    <LinearGradient colors={['#4facfe', '#00f2fe']} style={styles.flexOne}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.loginContainer}>
+        <View style={styles.loginForm}>
+          <Image source={{ uri: 'https://i.ibb.co/6PqjXfJ/health-logo.png' }} style={styles.logo} />
+          <Text style={styles.loginTitle}>AI Health Advisor</Text>
+          <Text style={styles.loginSubtitle}>Your Personal Wellness Companion</Text>
+          <TextInput
+            style={styles.loginInput}
+            placeholder="Enter your first name"
+            placeholderTextColor="#666"
+            value={name}
+            onChangeText={setName}
+          />
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.loginButtonGradient}>
+              <Text style={styles.loginButtonText}>Get Started</Text>
+              <Feather name="arrow-right-circle" size={22} color="white" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
+  );
+};
+
+// ------------------------- CHAT SCREEN -------------------------
+const ChatScreen = ({ username }: { username: string }) => {
+  const [messages, setMessages] = useState<any[]>([
+    { id: 'initial-bot-message', role: 'model', content: `Hi ${username}! I'm your AI Health Advisor. Type, speak, or send a picture.` }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [pickedImage, setPickedImage] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [language, setLanguage] = useState<'en-US' | 'hi-IN'>('en-US');
+  const [isVoiceOutput, setIsVoiceOutput] = useState(true);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // ------------------------- PERMISSIONS & VOICE -------------------------
+  useEffect(() => {
+    (async () => {
+      await Camera.requestCameraPermissionsAsync();
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (Platform.OS === 'android' || Platform.OS === 'ios') {
+        try {
+          await Voice.requestPermissions();
+        } catch (err) {
+          console.warn('Voice permission error:', err);
+        }
+      }
+    })();
+
+    const onSpeechResults = (e: any) => {
+      if (e.value?.length) setInputMessage(e.value[0]);
+      setIsRecording(false);
+    };
+    const onSpeechError = (e: any) => {
+      console.error('Voice Error:', e);
+      setIsRecording(false);
+    };
+
+    Voice.onSpeechResults = onSpeechResults;
+    Voice.onSpeechError = onSpeechError;
+
+    return () => { Voice.destroy().then(Voice.removeAllListeners); };
+  }, []);
+
+  // ------------------------- HANDLERS -------------------------
+  const startRecording = async () => {
+    setIsRecording(true);
+    setInputMessage('');
+    try { await Voice.start(language); } catch (err) { console.error(err); setIsRecording(false); }
+  };
+  const stopRecording = async () => { try { await Voice.stop(); } catch (err) { console.error(err); } setIsRecording(false); };
+
+  const handlePickImage = async () => {
+    Alert.alert('Select Image', 'Choose image source', [
+      { text: 'Camera', onPress: async () => { const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true }); if (!res.canceled) setPickedImage(res.assets[0]); }},
+      { text: 'Gallery', onPress: async () => { const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true }); if (!res.canceled) setPickedImage(res.assets[0]); }},
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
+
+  const speakResponse = (text: string) => { if (isVoiceOutput) Speech.speak(text, { language: language === 'en-US' ? 'en' : 'hi' }); };
+
+  const handleSendMessage = async () => {
+    if ((inputMessage.trim() === '' && !pickedImage) || isLoading) return;
+
+    const userMessage = { id: Date.now().toString(), role: 'user', content: inputMessage.trim(), imageUri: pickedImage?.uri };
+    setMessages(prev => [...prev, userMessage]);
+    const imageToSend = pickedImage?.base64 || null;
+    setInputMessage(''); setPickedImage(null); setIsLoading(true);
+
+    const currentLang = language === 'en-US' ? 'English' : 'Hindi';
+    const prompt = `Your Role: You are a cautious AI Health Advisor.
+Language for Response: ${currentLang}.
+CRUCIAL RULE 1: Always start with: "Disclaimer: I am an AI, not a medical professional. Consult a qualified doctor"
+CRUCIAL RULE 2: Suggest only over-the-counter medications with disclaimer.
+User Query: "${userMessage.content}"`;
 
     try {
-        const response = await fetch(GEMINI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-        });
-        const data = await response.json();
-        if (response.ok && data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            const errorMsg = data.error?.message || 'The AI is unavailable. Please check the API key and try again.';
-            throw new Error(errorMsg);
-        }
-    } catch (error) {
-        console.error("API Fetch Error:", error);
-        throw new Error('Network error or invalid API key. Please check your connection and configuration.');
-    }
-};
+      const aiContent = await callGeminiAPI(prompt, imageToSend);
+      const aiMessage = { id: Date.now().toString() + 'ai', role: 'model', content: aiContent };
+      setMessages(prev => [...prev, aiMessage]);
+      speakResponse(aiContent);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { id: Date.now().toString() + 'err', role: 'model', content: `Error: ${err.message}` }]);
+    } finally { setIsLoading(false); }
+  };
 
-// --- SUB-COMPONENTS (Styling Applied) ---
+  return (
+    <View style={styles.flexOne}>
+      <View style={styles.featureToggleBar}>
+        <TouchableOpacity onPress={() => setLanguage(prev => prev === 'en-US' ? 'hi-IN' : 'en-US')} style={styles.toggleButton}>
+          <Feather name="globe" size={20} color="#333" />
+          <Text style={styles.toggleText}>{language === 'en-US' ? 'EN' : 'HI'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setIsVoiceOutput(prev => !prev)} style={styles.toggleButton}>
+          <Feather name={isVoiceOutput ? 'volume-2' : 'volume-x'} size={20} color={isVoiceOutput ? '#2575fc' : '#333'} />
+          <Text style={[styles.toggleText, isVoiceOutput && { color: '#2575fc' }]}>Voice</Text>
+        </TouchableOpacity>
+      </View>
 
-const LoginScreen = ({ onLogin }) => {
-    // This component remains the same as your working version, just with updated styles.
-    const [name, setName] = useState('');
-    const handleLogin = () => {
-        if (name.trim().length > 2) onLogin(name.trim());
-        else Alert.alert('Invalid Name', 'Please enter a name with at least 3 characters.');
-    };
-    return (
-        <LinearGradient colors={['#4facfe', '#00f2fe']} style={styles.flexOne}>
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.loginContainer}>
-                <View style={styles.loginForm}>
-                    <Image source={{ uri: 'https://i.ibb.co/6PqjXfJ/health-logo.png' }} style={styles.logo} />
-                    <Text style={styles.loginTitle}>AI Health Advisor</Text>
-                    <Text style={styles.loginSubtitle}>Your Personal Wellness Companion</Text>
-                    <TextInput style={styles.loginInput} placeholder="Enter your first name" placeholderTextColor="#666" value={name} onChangeText={setName} />
-                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                         <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.loginButtonGradient}>
-                            <Text style={styles.loginButtonText}>Get Started</Text>
-                            <Feather name="arrow-right-circle" size={22} color="white" />
-                         </LinearGradient>
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
-        </LinearGradient>
-    );
-};
+      <ScrollView ref={scrollViewRef} style={styles.chatContainer} contentContainerStyle={styles.chatContentContainer}
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
+        {messages.map(msg => (
+          <View key={msg.id} style={[styles.messageBubble, msg.role === 'user' ? styles.userMessage : styles.botMessage]}>
+            {msg.imageUri && <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />}
+            {msg.content !== '' && <Text style={msg.role === 'user' ? styles.userMessageText : styles.botMessageText}>{msg.content}</Text>}
+          </View>
+        ))}
+        {isLoading && <ActivityIndicator style={styles.loadingIndicator} size="large" color="#2575fc" />}
+      </ScrollView>
 
-const ChatScreen = ({ username }) => {
-    // --- STATE FOR NEW FEATURES ---
-    const [messages, setMessages] = useState([{ id: 'initial-bot-message', role: 'model', content: `Hi ${username}! I'm your AI Health Advisor. You can type, use the microphone, or send a picture.` }]);
-    const [inputMessage, setInputMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [pickedImage, setPickedImage] = useState(null); // For camera/gallery image
-    const [isRecording, setIsRecording] = useState(false); // For microphone state
-    const [language, setLanguage] = useState('en-US'); // 'en-US' or 'hi-IN'
-    const [isVoiceOutput, setIsVoiceOutput] = useState(false); // For toggling TTS
-    const scrollViewRef = useRef();
-
-    // --- PERMISSIONS & VOICE SETUP ---
-    useEffect(() => {
-        // Request permissions on mount
-        (async () => {
-            await Camera.requestCameraPermissionsAsync();
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (Platform.OS === 'android') {
-                 await Voice.requestPermissions();
-            }
-        })();
-
-        // Setup Voice event listeners
-        const onSpeechResults = (e) => {
-            setInputMessage(e.value[0]);
-            setIsRecording(false);
-        };
-        const onSpeechError = (e) => {
-            console.error(e);
-            setIsRecording(false);
-        };
-        Voice.onSpeechResults = onSpeechResults;
-        Voice.onSpeechError = onSpeechError;
-        return () => { // Cleanup
-            Voice.destroy().then(Voice.removeAllListeners);
-        };
-    }, []);
-
-    // --- HANDLERS FOR NEW FEATURES ---
-    const handleLanguageToggle = () => setLanguage(prev => (prev === 'en-US' ? 'hi-IN' : 'en-US'));
-    const handleVoiceOutputToggle = () => setIsVoiceOutput(prev => !prev);
-    
-    const startRecording = async () => {
-        setIsRecording(true);
-        setInputMessage('');
-        try {
-            await Voice.start(language);
-        } catch (e) {
-            console.error(e);
-            setIsRecording(false);
-        }
-    };
-    const stopRecording = async () => {
-        try {
-            await Voice.stop();
-        } catch (e) {
-            console.error(e);
-        }
-        setIsRecording(false);
-    };
-
-    const handlePickImage = async () => {
-        Alert.alert("Select Image", "Choose an image source", [
-            { text: "Camera", onPress: async () => {
-                let result = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
-                if (!result.canceled) setPickedImage(result.assets[0]);
-            }},
-            { text: "Gallery", onPress: async () => {
-                let result = await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true });
-                if (!result.canceled) setPickedImage(result.assets[0]);
-            }},
-            { text: "Cancel", style: "cancel" }
-        ]);
-    };
-    
-    const speakResponse = (text) => {
-      if (isVoiceOutput) {
-        Speech.speak(text, { language: language === 'en-US' ? 'en' : 'hi' });
-      }
-    };
-
-    const handleSendMessage = async () => {
-        if ((inputMessage.trim() === '' && !pickedImage) || isLoading) return;
-
-        const userMessageContent = inputMessage.trim();
-        const userMessage = { id: Date.now().toString(), role: 'user', content: userMessageContent, imageUri: pickedImage?.uri };
-        setMessages(prev => [...prev, userMessage]);
-        
-        const imageToSend = pickedImage?.base64 || null;
-
-        setInputMessage('');
-        setPickedImage(null);
-        setIsLoading(true);
-
-        const currentLanguage = language === 'en-US' ? 'English' : 'Hindi';
-        const prompt = `**Your Role:** You are a helpful and cautious AI Health Advisor.
-**Language for Response:** You MUST respond in ${currentLanguage}.
-**CRUCIAL RULE 1:** ALWAYS start your response with a disclaimer: "**Disclaimer: I am an AI assistant, not a medical professional. This is for informational purposes only. Please consult a qualified healthcare provider for any medical advice.**" (Translate this disclaimer to ${currentLanguage} if needed).
-**CRUCIAL RULE 2:** If the user asks for a specific medication or tablet, you may suggest a common over-the-counter example (e.g., 'for a headache, something like Paracetamol is common'), but you MUST immediately and strongly follow up with a disclaimer like 'However, this is not a prescription. You MUST consult a qualified doctor before taking any medication.' Do not suggest prescription drugs.
-**Your Task:** Analyze the user's text and, if provided, the image. The user's query is: "${userMessageContent}". Respond empathetically and safely according to the rules.`;
-        
-        try {
-            const aiContent = await callGeminiAPI(prompt, imageToSend);
-            const aiMessage = { id: Date.now().toString() + 'ai', role: 'model', content: aiContent };
-            setMessages(prev => [...prev, aiMessage]);
-            speakResponse(aiContent); // Speak the response
-        } catch (error) {
-            const errorMessage = { id: Date.now().toString() + 'err', role: 'model', content: `Error: ${error.message}` };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <View style={styles.flexOne}>
-            <View style={styles.featureToggleBar}>
-                 <TouchableOpacity onPress={handleLanguageToggle} style={styles.toggleButton}>
-                    <Feather name="globe" size={20} color="#333" />
-                    <Text style={styles.toggleText}>{language === 'en-US' ? 'EN' : 'HI'}</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity onPress={handleVoiceOutputToggle} style={styles.toggleButton}>
-                    <Feather name={isVoiceOutput ? "volume-2" : "volume-x"} size={20} color={isVoiceOutput ? "#2575fc" : "#333"} />
-                    <Text style={[styles.toggleText, isVoiceOutput && {color: "#2575fc"}]}>Voice</Text>
-                 </TouchableOpacity>
-            </View>
-
-            <ScrollView ref={scrollViewRef} style={styles.chatContainer} contentContainerStyle={styles.chatContentContainer} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
-                {messages.map((msg) => (
-                    <View key={msg.id} style={[styles.messageBubble, msg.role === 'user' ? styles.userMessage : styles.botMessage]}>
-                        {msg.imageUri && <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />}
-                        {msg.content !== '' && <Text style={msg.role === 'user' ? styles.userMessageText : styles.botMessageText}>{msg.content}</Text>}
-                    </View>
-                ))}
-                {isLoading && <ActivityIndicator style={styles.loadingIndicator} size="large" color="#2575fc" />}
-            </ScrollView>
-
-            <View style={styles.inputWrapper}>
-                {pickedImage && (
-                    <View style={styles.imagePreviewContainer}>
-                        <Image source={{ uri: pickedImage.uri }} style={styles.imagePreview} />
-                        <TouchableOpacity onPress={() => setPickedImage(null)} style={styles.removeImageButton}>
-                            <Feather name="x" size={18} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                )}
-                <View style={styles.inputRow}>
-                    <TouchableOpacity style={styles.iconButton} onPress={handlePickImage} disabled={isLoading}>
-                        <Feather name="camera" size={24} color="#555" />
-                    </TouchableOpacity>
-                    <TextInput style={styles.chatInput} value={inputMessage} onChangeText={setInputMessage} placeholder="Type or hold mic to talk..." placeholderTextColor="#999" multiline editable={!isLoading} />
-                    <TouchableOpacity style={styles.iconButton} onPressIn={startRecording} onPressOut={stopRecording} disabled={isLoading}>
-                        <Feather name="mic" size={24} color={isRecording ? '#ff4d4d' : '#555'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.sendButton, isLoading && styles.disabledButton]} onPress={handleSendMessage} disabled={isLoading}>
-                        <Feather name="send" size={24} color="white" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </View>
-    );
-};
-
-// ... HealthTipsScreen and Main App component remain the same ...
-const HealthTipsScreen = ({ onLogout }) => {
-    const [tip, setTip] = useState('Tap the button below for a new wellness tip!');
-    const [isTipLoading, setIsTipLoading] = useState(false);
-    const fetchHealthTip = async () => {
-        setIsTipLoading(true); setTip('');
-        const prompt = `Provide a unique, interesting, and actionable wellness tip for today. Make it encouraging and easy to understand. Start with a catchy title in bold, like "**Today's Wellness Spark:**".`;
-        try {
-            setTip(await callGeminiAPI(prompt));
-        } catch (error) {
-            setTip(`Sorry, couldn't fetch a tip right now. ${error.message}`);
-        } finally { setIsTipLoading(false); }
-    };
-    return (
-        <View style={styles.tipsContainer}>
-            <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.tipCard}>
-                <View style={styles.tipCardContent}>
-                    {isTipLoading ? <ActivityIndicator size="large" color="#fff" /> : <Text style={styles.tipText}>{tip}</Text>}
-                </View>
-            </LinearGradient>
-            <TouchableOpacity style={styles.tipButton} onPress={fetchHealthTip} disabled={isTipLoading}>
-                 <LinearGradient colors={['#11998e', '#38ef7d']} style={styles.loginButtonGradient}>
-                    <Text style={styles.tipButtonText}>Get New Tip</Text><Feather name="refresh-cw" size={20} color="white" />
-                 </LinearGradient>
+      <View style={styles.inputWrapper}>
+        {pickedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: pickedImage.uri }} style={styles.imagePreview} />
+            <TouchableOpacity onPress={() => setPickedImage(null)} style={styles.removeImageButton}>
+              <Feather name="x" size={18} color="white" />
             </TouchableOpacity>
+          </View>
+        )}
+        <View style={styles.inputRow}>
+          <TouchableOpacity style={styles.iconButton} onPress={handlePickImage} disabled={isLoading}>
+            <Feather name="camera" size={24} color="#555" />
+          </TouchableOpacity>
+          <TextInput style={styles.chatInput} value={inputMessage} onChangeText={setInputMessage} placeholder="Type or hold mic..." placeholderTextColor="#999" multiline editable={!isLoading} />
+          <TouchableOpacity style={styles.iconButton} onPressIn={startRecording} onPressOut={stopRecording} disabled={isLoading}>
+            <Feather name="mic" size={24} color={isRecording ? '#ff4d4d' : '#555'} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.sendButton, isLoading && styles.disabledButton]} onPress={handleSendMessage} disabled={isLoading}>
+            <Feather name="send" size={24} color="white" />
+          </TouchableOpacity>
         </View>
-    );
+      </View>
+    </View>
+  );
 };
 
+// ------------------------- HEALTH TIPS -------------------------
+const HealthTipsScreen = () => {
+  const [tip, setTip] = useState('Tap for a new wellness tip!');
+  const [isTipLoading, setIsTipLoading] = useState(false);
+
+  const fetchHealthTip = async () => {
+    setIsTipLoading(true); setTip('');
+    const prompt = `Give a unique, actionable wellness tip. Start with " Today's Wellness Spark: "`;
+    try { setTip(await callGeminiAPI(prompt)); } catch (err: any) { setTip(`Error: ${err.message}`); } finally { setIsTipLoading(false); }
+  };
+
+  return (
+    <View style={styles.tipsContainer}>
+      <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.tipCard}>
+        <View style={styles.tipCardContent}>
+          {isTipLoading ? <ActivityIndicator size="large" color="#fff" /> : <Text style={styles.tipText}>{tip}</Text>}
+        </View>
+      </LinearGradient>
+      <TouchableOpacity style={styles.tipButton} onPress={fetchHealthTip} disabled={isTipLoading}>
+        <LinearGradient colors={['#11998e', '#38ef7d']} style={styles.loginButtonGradient}>
+          <Text style={styles.tipButtonText}>Get New Tip</Text>
+          <Feather name="refresh-cw" size={20} color="white" />
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// ------------------------- MAIN APP -------------------------
 export default function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [username, setUsername] = useState('');
-    const [activeTab, setActiveTab] = useState('chat');
-    const handleLogin = (name) => { setUsername(name); setIsLoggedIn(true); };
-    const handleLogout = () => {
-        Alert.alert("Log Out", "Are you sure you want to log out?", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Log Out", onPress: () => { setUsername(''); setIsLoggedIn(false); setActiveTab('chat'); }}
-        ]);
-    };
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="dark-content" />
-            {!isLoggedIn ? <LoginScreen onLogin={handleLogin} /> : (
-                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flexOne}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>Hi, {username}!</Text>
-                        <TouchableOpacity onPress={handleLogout}><Feather name="log-out" size={24} color="#333" /></TouchableOpacity>
-                    </View>
-                    <View style={styles.tabBar}>
-                        <TouchableOpacity style={[styles.tab, activeTab === 'chat' && styles.activeTab]} onPress={() => setActiveTab('chat')}>
-                            <Feather name="message-circle" size={20} color={activeTab === 'chat' ? '#FFF' : '#2575fc'} />
-                            <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Advisor Chat</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tab, activeTab === 'tips' && styles.activeTab]} onPress={() => setActiveTab('tips')}>
-                            <Feather name="heart" size={20} color={activeTab === 'tips' ? '#FFF' : '#2575fc'} />
-                            <Text style={[styles.tabText, activeTab === 'tips' && styles.activeTabText]}>Health Tips</Text>
-                        </TouchableOpacity>
-                    </View>
-                    {activeTab === 'chat' ? <ChatScreen username={username} /> : <HealthTipsScreen />}
-                </KeyboardAvoidingView>
-            )}
-        </SafeAreaView>
-    );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
+  const [activeTab, setActiveTab] = useState<'chat' | 'tips'>('chat');
+
+  const handleLogin = (name: string) => { setUsername(name); setIsLoggedIn(true); };
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log Out', onPress: () => { setUsername(''); setIsLoggedIn(false); setActiveTab('chat'); } }
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      {!isLoggedIn ? <LoginScreen onLogin={handleLogin} /> : (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexOne}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Hi, {username}!</Text>
+            <TouchableOpacity onPress={handleLogout}><Feather name="log-out" size={24} color="#333" /></TouchableOpacity>
+          </View>
+          <View style={styles.tabBar}>
+            <TouchableOpacity style={[styles.tab, activeTab === 'chat' && styles.activeTab]} onPress={() => setActiveTab('chat')}>
+              <Feather name="message-circle" size={20} color={activeTab === 'chat' ? '#FFF' : '#2575fc'} />
+              <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Advisor Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tab, activeTab === 'tips' && styles.activeTab]} onPress={() => setActiveTab('tips')}>
+              <Feather name="heart" size={20} color={activeTab === 'tips' ? '#FFF' : '#2575fc'} />
+              <Text style={[styles.tabText, activeTab === 'tips' && styles.activeTabText]}>Health Tips</Text>
+            </TouchableOpacity>
+          </View>
+          {activeTab === 'chat' ? <ChatScreen username={username} /> : <HealthTipsScreen />}
+        </KeyboardAvoidingView>
+      )}
+    </SafeAreaView>
+  );
 }
 
-// --- STYLESHEET (Updated for new features) ---
+// ------------------------- STYLES (unchanged from your v6) -------------------------
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#f0f4f8', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
-    flexOne: { flex: 1 },
-    loginContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    loginForm: { width: '90%', backgroundColor: 'rgba(255, 255, 255, 0.8)', padding: 25, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-    logo: { width: 100, height: 100, marginBottom: 20, borderRadius: 20 },
-    loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' },
-    loginSubtitle: { fontSize: 16, color: '#555', marginBottom: 30, textAlign: 'center' },
-    loginInput: { width: '100%', height: 50, backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 15, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: '#DDD', color: '#333' },
-    loginButton: { width: '100%', borderRadius: 10, overflow: 'hidden' },
-    loginButtonGradient: { flexDirection: 'row', paddingVertical: 15, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    loginButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
-    headerTitle: { fontSize: 22, fontWeight: '600', color: '#333' },
-    tabBar: { flexDirection: 'row', padding: 5, marginHorizontal: 15, marginTop: 10, marginBottom: 5, borderRadius: 30, backgroundColor: '#FFF', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 25 },
-    activeTab: { backgroundColor: '#2575fc' },
-    tabText: { marginLeft: 8, fontSize: 16, color: '#2575fc', fontWeight: '600' },
-    activeTabText: { color: '#FFF' },
-    chatContainer: { flex: 1, backgroundColor: '#f0f4f8' },
-    chatContentContainer: { paddingHorizontal: 10, paddingBottom: 10 },
-    messageBubble: { maxWidth: '80%', padding: 15, borderRadius: 20, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
-    userMessage: { backgroundColor: '#2575fc', alignSelf: 'flex-end', borderBottomRightRadius: 5 },
-    botMessage: { backgroundColor: '#FFF', alignSelf: 'flex-start', borderBottomLeftRadius: 5 },
-    userMessageText: { color: 'white', fontSize: 16, lineHeight: 24 },
-    botMessageText: { color: '#333', fontSize: 16, lineHeight: 24 },
-    messageImage: { width: width * 0.6, height: width * 0.6, borderRadius: 15, marginBottom: 10, alignSelf: 'center' },
-    loadingIndicator: { marginVertical: 20 },
-    inputWrapper: { borderTopWidth: 1, borderTopColor: '#EAEAEA', backgroundColor: '#FFF', paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
-    inputRow: { flexDirection: 'row', alignItems: 'center', padding: 10, },
-    chatInput: { flex: 1, minHeight: 45, maxHeight: 120, backgroundColor: '#f0f4f8', borderRadius: 22, paddingHorizontal: 20, paddingTop: 12, fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0' },
-    iconButton: { padding: 10 },
-    sendButton: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: '#2575fc', justifyContent: 'center', alignItems: 'center', shadowColor: '#2575fc', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4, marginLeft: 5 },
-    disabledButton: { backgroundColor: '#B0C4DE', shadowOpacity: 0 },
-    imagePreviewContainer: { position: 'relative', alignSelf: 'flex-start', margin: 10, },
-    imagePreview: { width: 80, height: 80, borderRadius: 10, borderWidth: 2, borderColor: '#2575fc' },
-    removeImageButton: { position: 'absolute', top: -10, right: -10, backgroundColor: '#ff4d4d', borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
-    featureToggleBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 15, paddingVertical: 5, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eaeaea' },
-    toggleButton: { flexDirection: 'row', alignItems: 'center', padding: 8, marginLeft: 15 },
-    toggleText: { marginLeft: 5, fontWeight: '600', color: '#333' },
-    tipsContainer: { flex: 1, alignItems: 'center', justifyContent: 'space-around', padding: 20, backgroundColor: '#f0f4f8' },
-    tipCard: { width: '100%', height: height * 0.5, borderRadius: 30, padding: 5, shadowColor: '#6a11cb', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
-    tipCardContent: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 25 },
-    tipText: { fontSize: 22, color: 'white', fontWeight: 'bold', textAlign: 'center', lineHeight: 32, textShadowColor: 'rgba(0, 0, 0, 0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-    tipButton: { width: '80%', borderRadius: 10, overflow: 'hidden' },
-    tipButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
+  safeArea: { flex: 1, backgroundColor: '#f0f4f8', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  flexOne: { flex: 1 },
+  loginContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loginForm: { width: '90%', backgroundColor: 'rgba(255,255,255,0.8)', padding: 25, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
+  logo: { width: 100, height: 100, marginBottom: 20, borderRadius: 20 },
+  loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' },
+  loginSubtitle: { fontSize: 16, color: '#555', marginBottom: 30, textAlign: 'center' },
+  loginInput: { width: '100%', height: 50, backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 15, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: '#DDD', color: '#333' },
+  loginButton: { width: '100%', borderRadius: 10, overflow: 'hidden' },
+  loginButtonGradient: { flexDirection: 'row', paddingVertical: 15, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  loginButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
+  headerTitle: { fontSize: 22, fontWeight: '600', color: '#333' },
+  tabBar: { flexDirection: 'row', padding: 5, marginHorizontal: 15, marginTop: 10, marginBottom: 5, borderRadius: 30, backgroundColor: '#FFF', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 25 },
+  activeTab: { backgroundColor: '#2575fc' },
+  tabText: { marginLeft: 8, fontSize: 16, color: '#2575fc', fontWeight: '600' },
+  activeTabText: { color: '#FFF' },
+  chatContainer: { flex: 1, backgroundColor: '#f0f4f8' },
+  chatContentContainer: { paddingHorizontal: 10, paddingBottom: 10 },
+  messageBubble: { maxWidth: '80%', padding: 15, borderRadius: 20, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  userMessage: { backgroundColor: '#2575fc', alignSelf: 'flex-end', borderBottomRightRadius: 5 },
+  botMessage: { backgroundColor: '#FFF', alignSelf: 'flex-start', borderBottomLeftRadius: 5 },
+  userMessageText: { color: 'white', fontSize: 16, lineHeight: 24 },
+  botMessageText: { color: '#333', fontSize: 16, lineHeight: 24 },
+  messageImage: { width: width * 0.6, height: width * 0.6, borderRadius: 15, marginBottom: 10, alignSelf: 'center' },
+  loadingIndicator: { marginVertical: 20 },
+  inputWrapper: { borderTopWidth: 1, borderTopColor: '#EAEAEA', backgroundColor: '#FFF', paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  chatInput: { flex: 1, minHeight: 45, maxHeight: 120, backgroundColor: '#f0f4f8', borderRadius: 22, paddingHorizontal: 20, paddingTop: 12, fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0' },
+  iconButton: { padding: 10 },
+  sendButton: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: '#2575fc', justifyContent: 'center', alignItems: 'center', shadowColor: '#2575fc', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4, marginLeft: 5 },
+  disabledButton: { backgroundColor: '#B0C4DE', shadowOpacity: 0 },
+  imagePreviewContainer: { position: 'relative', alignSelf: 'flex-start', margin: 10 },
+  imagePreview: { width: 80, height: 80, borderRadius: 10, borderWidth: 2, borderColor: '#2575fc' },
+  removeImageButton: { position: 'absolute', top: -10, right: -10, backgroundColor: '#ff4d4d', borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  featureToggleBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 15, paddingVertical: 5, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eaeaea' },
+  toggleButton: { flexDirection: 'row', alignItems: 'center', padding: 8, marginLeft: 15 },
+  toggleText: { marginLeft: 5, fontWeight: '600', color: '#333' },
+  tipsContainer: { flex: 1, alignItems: 'center', justifyContent: 'space-around', padding: 20, backgroundColor: '#f0f4f8' },
+  tipCard: { width: '100%', height: height * 0.5, borderRadius: 30, padding: 5, shadowColor: '#6a11cb', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  tipCardContent: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 25, justifyContent: 'center', alignItems: 'center', padding: 25 },
+  tipText: { fontSize: 22, color: 'white', fontWeight: 'bold', textAlign: 'center', lineHeight: 32, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  tipButton: { width: '80%', borderRadius: 10, overflow: 'hidden' },
+  tipButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
 });
